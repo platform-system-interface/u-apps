@@ -120,53 +120,11 @@ type smodel struct {
 	err      error
 }
 
-func initialSModel() smodel {
-	s := spinner.New()
-	s.Spinner = spinner.Dot
-	s.Style = gloss.NewStyle().Foreground(gloss.Color("205"))
-	return smodel{spinner: s}
-}
-
 func (m smodel) Init() tea.Cmd {
 	return m.spinner.Tick
 }
 
 type errMsg error
-
-func (m smodel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "esc", "ctrl+c":
-			m.quitting = true
-			return m, tea.Quit
-		default:
-			return m, nil
-		}
-
-	case errMsg:
-		m.err = msg
-		return m, nil
-
-	default:
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msg)
-		return m, cmd
-	}
-
-}
-
-func (m smodel) View() string {
-	if m.err != nil {
-		return m.err.Error()
-	}
-	str := fmt.Sprintf("\n\n   %s Loading forever...press q to quit\n\n", m.spinner.View())
-	if m.quitting {
-		return str + "\n"
-	}
-	return str
-}
 
 var (
 	appStyle = gloss.NewStyle().Padding(1, 2)
@@ -182,14 +140,24 @@ var (
 )
 
 type mmodel struct {
-	list list.Model
+	list    list.Model
+	spinner spinner.Model
+	loading bool
+	err     error
 }
 
 func (m mmodel) Init() tea.Cmd {
-	return tea.EnterAltScreen
+	var cmds []tea.Cmd
+
+	cmds = append(cmds, tea.EnterAltScreen, m.spinner.Tick)
+	return tea.Batch(cmds...)
 }
 
 func (m mmodel) View() string {
+	if m.loading {
+		str := fmt.Sprintf("\n\n %s ...... \n\n", m.spinner.View())
+		return str
+	}
 	return appStyle.Render(m.list.View())
 }
 
@@ -203,17 +171,29 @@ func (m mmodel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "esc", "ctrl+c":
 			return m, tea.Quit
+		case "s":
+			var cmd tea.Cmd
+			m.spinner, cmd = m.spinner.Update(msg)
+			m.loading = !m.loading
+			return m, cmd
+
 		default:
-			//	return m, nil
 		}
+
+	case errMsg:
+		m.err = msg
+		return m, nil
 	}
 
 	// This will also call our delegate's update function.
-	newListModel, cmd := m.list.Update(msg)
+	newListModel, lcmd := m.list.Update(msg)
 	m.list = newListModel
-	cmds = append(cmds, cmd)
 
-	return m, nil // tea.Batch(cmds...)
+	newSpinner, scmd := m.spinner.Update(msg)
+	m.spinner = newSpinner
+
+	cmds = append(cmds, scmd, lcmd)
+	return m, tea.Batch(cmds...)
 }
 
 type item struct {
@@ -246,8 +226,15 @@ func newModel() mmodel {
 	l := list.New(items, d, 0, 0)
 	l.Title = "MSR explorer"
 	l.Styles.Title = titleStyle
+	// l.Styles.PaginationStyle = gloss.NewStyle().Foreground(gloss.Color("25"))
+
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = gloss.NewStyle().Foreground(gloss.Color("205"))
+
 	return mmodel{
-		list: l,
+		list:    l,
+		spinner: s,
 	}
 }
 
@@ -260,11 +247,6 @@ func main() {
 		p := tea.NewProgram(initialModel())
 		if err := p.Start(); err != nil {
 			fmt.Printf("Alas, there's been an error: %v", err)
-			os.Exit(1)
-		}
-		o := tea.NewProgram(initialSModel())
-		if err := o.Start(); err != nil {
-			fmt.Println(err)
 			os.Exit(1)
 		}
 	}
