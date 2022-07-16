@@ -223,7 +223,19 @@ func (m mmodel) View() string {
 
 func (m mmodel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
-	return m, tea.Batch(cmds...)
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		h, v := appStyle.GetFrameSize()
+		m.list.SetSize(msg.Width-h, msg.Height-v)
+	case tea.KeyMsg:
+	}
+
+	// This will also call our delegate's update function.
+	newListModel, cmd := m.list.Update(msg)
+	m.list = newListModel
+	cmds = append(cmds, cmd)
+
+	return m, nil // tea.Batch(cmds...)
 }
 
 type item struct {
@@ -239,7 +251,7 @@ func newModel() mmodel {
 	items := make([]list.Item, len(MSRS))
 	for i, m := range MSRS {
 		items[i] = item{
-			title:       fmt.Sprintf("%d", m.Addr),
+			title:       fmt.Sprintf("%d   -----", m.Addr),
 			description: m.Name,
 		}
 	}
