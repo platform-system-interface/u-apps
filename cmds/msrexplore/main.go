@@ -187,6 +187,7 @@ const (
 )
 
 var MSRS = []msr.MSRVal{
+	/* https://github.com/bytedance/kvm-utils/blob/master/microbenchmark/msr-bench/msr-index.h */
 	{Name: "EFER", Addr: EFER, Set: 0},
 	{Name: "STAR", Addr: STAR, Set: 0},
 	{Name: "LSTAR", Addr: LSTAR, Set: 0},
@@ -237,6 +238,12 @@ func (m mmodel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		h, v := appStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
 	case tea.KeyMsg:
+		switch msg.String() {
+		case "q", "esc", "ctrl+c":
+			return m, tea.Quit
+		default:
+			//	return m, nil
+		}
 	}
 
 	// This will also call our delegate's update function.
