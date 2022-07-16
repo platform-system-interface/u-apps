@@ -269,14 +269,20 @@ func newModel() mmodel {
 	for i, m := range msrs {
 		cpus, _ := msr.AllCPUs()
 		v, e := msr.MSR(m.Addr).Read(cpus)
+		var title string
+		if e != nil {
+			title = fmt.Sprintf("--%v--", e)
+		} else {
+			title = fmt.Sprintf("%016x %064b", v, v)
+		}
 		items[i] = item{
-			title:       fmt.Sprintf("%d : %x --%v--", m.Addr, v, e),
-			description: m.Name,
+			title:       title,
+			description: fmt.Sprintf("%8x [%s]", uint(m.Addr), m.Name),
 		}
 	}
 	d := list.NewDefaultDelegate()
 	l := list.New(items, d, 0, 0)
-	l.Title = "MSRs"
+	l.Title = "MSR explorer"
 	l.Styles.Title = titleStyle
 	return mmodel{
 		list: l,
@@ -299,11 +305,5 @@ func main() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-	}
-	cpus, _ := msr.AllCPUs()
-	msrs := append(MSRS, msr.LockIntel...)
-	for _, m := range msrs {
-		v, e := msr.MSR(m.Addr).Read(cpus)
-		fmt.Printf("%v %v __ %v\n", m.Name, v, e)
 	}
 }
