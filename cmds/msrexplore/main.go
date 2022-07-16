@@ -207,6 +207,15 @@ var MSRS = []msr.MSRVal{
 
 var (
 	appStyle = gloss.NewStyle().Padding(1, 2)
+
+	titleStyle = gloss.NewStyle().
+			Foreground(gloss.Color("#FFFDF5")).
+			Background(gloss.Color("#25A065")).
+			Padding(0, 1)
+
+	statusMessageStyle = gloss.NewStyle().
+				Foreground(gloss.AdaptiveColor{Light: "#04B575", Dark: "#04B575"}).
+				Render
 )
 
 type mmodel struct {
@@ -248,15 +257,20 @@ func (i item) Description() string { return i.description }
 func (i item) FilterValue() string { return i.title }
 
 func newModel() mmodel {
-	items := make([]list.Item, len(MSRS))
-	for i, m := range MSRS {
+	msrs := append(MSRS, msr.LockIntel...)
+	items := make([]list.Item, len(msrs))
+	for i, m := range msrs {
+		cpus, _ := msr.AllCPUs()
+		v, e := msr.MSR(m.Addr).Read(cpus)
 		items[i] = item{
-			title:       fmt.Sprintf("%d   -----", m.Addr),
+			title:       fmt.Sprintf("%d : %x --%v--", m.Addr, v, e),
 			description: m.Name,
 		}
 	}
 	d := list.NewDefaultDelegate()
 	l := list.New(items, d, 0, 0)
+	l.Title = "MSRs"
+	l.Styles.Title = titleStyle
 	return mmodel{
 		list: l,
 	}
