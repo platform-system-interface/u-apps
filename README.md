@@ -1,7 +1,7 @@
 # u-apps - a collection of CLI/TUI apps to explore platforms and systems
 
 Those apps are written in [Go](https://go.dev) and made with the awesome 🧋👄
-libraries from [Charm](https://charm.dev). Thank you Charm folks and kudos!
+libraries from [Charm](https://charm.sh). Thank you Charm folks and kudos!
 
 ## msrexplore
 
